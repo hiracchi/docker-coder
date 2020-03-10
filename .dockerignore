@@ -1,2 +1,7 @@
+Makefile
+
+*.log
+
+.git/*
 .DS_Store
 *~

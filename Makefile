@@ -1,5 +1,6 @@
+CODER_VERSION=2.1698-vsc1.41.1
 PACKAGE=registry.gitlab.com/hiracchi/docker-coder
-TAG=2.1692
+TAG=${CODER_VERSION}
 CONTAINER_NAME=coder
 
 #DEBUG_CMD=tail -f /dev/null
@@ -11,12 +12,15 @@ all: build
 build:
 	docker build \
 		-f Dockerfile \
-		-t "${PACKAGE}:${TAG}" . 2>&1 | tee build.log
+		-t "${PACKAGE}:${TAG}" \
+		--build-arg CODER_VERSION="${CODER_VERSION}" \
+		. 2>&1 | tee build.log
 
 start:
 	@\$(eval USER_ID := $(shell id -u))
 	@\$(eval GROUP_ID := $(shell id -g))
 	docker run -d \
+		--rm \
 		--name ${CONTAINER_NAME} \
 		--user ${USER_ID}:${GROUP_ID} \
 		--volume "${PWD}/work:/work" \
@@ -25,7 +29,6 @@ start:
 	@sleep 1
 	docker ps -a
 
-#--rm \
 
 stop:
 	docker rm -f ${CONTAINER_NAME}

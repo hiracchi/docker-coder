@@ -1,12 +1,20 @@
 FROM ubuntu:18.04
 
-ENV LANG="ja_JP.UTF-8" LANGUAGE="ja_JP:en" LC_ALL="ja_JP.UTF-8" TZ="Asia/Tokyo"
-ENV DEBIAN_FRONTEND=noninteractive
-
-ARG CODER_VERSION="2.1692-vsc1.39.2-linux-x86_64"
+ARG CODER_TAG="2.1698"
+ARG CODER_VERSION="2.1698-vsc1.41.1"
 ARG CODER_PATH=/usr/local/coder
 ARG WORKDIR="/work"
 
+# -----------------------------------------------------------------------------
+# env
+# -----------------------------------------------------------------------------
+ENV LANG="ja_JP.UTF-8" LANGUAGE="ja_JP:en" LC_ALL="ja_JP.UTF-8" TZ="Asia/Tokyo"
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CODER_PATH=${CODER_PATH}
+
+# -----------------------------------------------------------------------------
+# base setup
+# -----------------------------------------------------------------------------
 RUN set -x && \
     apt-get update && \
     apt-get install -y \
@@ -21,55 +29,42 @@ RUN set -x && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# RUN set -x && \
-#     apt-get update && \
-#     apt-get install -y \
-#     vim build-essential gfortran \
-#     pkg-config ca-certificates \
-#     git automake autoconf libtool cmake \
-#     libopenblas-base libopenblas-dev \
-#     libscalapack-openmpi-dev \
-#     openmpi-bin openmpi-common \
-#     \
-#     libeigen3-dev \
-#     \
-#     opencl-headers libclc-dev mesa-opencl-icd clinfo \
-#     \
-#     libboost-all-dev \
-#     hdf5-tools \
-#     libhdf5-dev \
-#     libhdf5-openmpi-dev \
-#     \
-#     python3-dev python3-pip python3-setuptools python3-pip python3-wheel \
-#     python3-numpy python3-scipy python3-scipy python3-pandas \
-#     python3-xlrd \
-#     python3-yaml python3-msgpack \
-#     python3-tqdm \
-#     python3-requests python3-jinja2 python3-bs4 \
-#     python3-matplotlib \
-#     python3-sklearn \
-#     python3-h5py \
-#     pylint3 \
-#     && \
-#     apt-get clean && \
-#     rm -rf /var/lib/apt/lists/*
+# -----------------------------------------------------------------------------
+# fixuid
+# -----------------------------------------------------------------------------
+ARG GROUP_NAME=docker
+ARG USER_NAME=docker
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+ENV GROUP_NAME=${GROUP_NAME}
+ENV USER_NAME=${USER_NAME}
 
-# install
+RUN set -x && \
+    addgroup --gid ${GROUP_ID} ${GROUP_NAME} && \
+    adduser --uid ${USER_ID} --ingroup ${GROUP_NAME} --home /home/${USER_NAME} --shell /bin/sh --disabled-password --gecos "" ${USER_NAME}
+RUN set -x && \
+     curl -SsL "https://github.com/boxboat/fixuid/releases/download/v0.4/fixuid-0.4-linux-amd64.tar.gz" | tar -C /usr/local/bin -xzf - && \
+     chmod 4755 /usr/local/bin/fixuid && \
+     mkdir -p /etc/fixuid && \
+     printf "user: ${USER_NAME}\ngroup: ${GROUP_NAME}\n" > /etc/fixuid/config.yml
+
+
+# -----------------------------------------------------------------------------
+# install code-server
+# -----------------------------------------------------------------------------
 RUN set -x && \
     mkdir -p ${CODER_PATH} && \
-    wget "https://github.com/cdr/code-server/releases/download/2.1692-vsc1.39.2/code-server${CODER_VERSION}.tar.gz" && \
-    tar -xzf "code-server${CODER_VERSION}.tar.gz" -C ${CODER_PATH} --strip-components 1
+    wget "https://github.com/cdr/code-server/releases/download/${CODER_TAG}/code-server${CODER_VERSION}-linux-x86_64.tar.gz" && \
+    tar -xzf "code-server${CODER_VERSION}-linux-x86_64.tar.gz" -C ${CODER_PATH} --strip-components 1 && \
+    rm code-server${CODER_VERSION}-linux-x86_64.tar.gz
 
-
-# workdir
-RUN set -x && \
-    mkdir -p ${WORKDIR}
-WORKDIR ${WORKDIR}
-
-# WORKDIR /works/app
-#
 # RUN set -x && \
-#     ${WORKDIR}/code-server --install-extension ms-vscode.cmake-tools && \
+#     mkdir -p ${CODER_PATH}/extensions && \
+#     chown -R root:${GROUP_NAME} ${CODER_PATH}/extensions && \
+#     chmod 774 ${CODER_PATH}/extensions
+
+# RUN set -x && \
+#     ${CODER_PATH}/code-server --extensions-dir ${CODER_PATH}/extensions --install-extension ms-vscode.cmake-tools
 #     ${WORKDIR}/code-server --install-extension cschlosser.doxdocgen && \
 #     ${WORKDIR}/code-server --install-extension manuth.markdown-converter && \
 #     ${WORKDIR}/code-server --install-extension davidanson.vscode-markdownlint && \
@@ -89,39 +84,21 @@ WORKDIR ${WORKDIR}
 # #    ${WORKDIR}/code-server --install-extension austin.code-gnu-global && \
 # #    ${WORKDIR}/code-server --install-extension tht13.python
 
-# fixuid
-ARG GROUP_NAME=docker
-ARG USER_NAME=docker
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-ENV GROUP_NAME=${GROUP_NAME}
-ENV USER_NAME=${USER_NAME}
-#
-# RUN set -x && \
-#     addgroup --gid ${GROUP_ID} ${GROUP_NAME} && \
-#     adduser --uid ${USER_ID} --ingroup ${GROUP_NAME} --home /home/${USER_NAME} --shell /bin/sh --disabled-password --gecos "" ${USER_NAME}
-# RUN set -x && \
-#     curl -SsL "https://github.com/boxboat/fixuid/releases/download/v0.4/fixuid-0.4-linux-amd64.tar.gz" | tar -C /usr/local/bin -xzf - && \
-#     chmod 4755 /usr/local/bin/fixuid && \
-#     mkdir -p /etc/fixuid && \
-#     printf "user: ${USERNAME}\ngroup: ${GROUPNAME}\n" > /etc/fixuid/config.yml
-#
-# USER ${USERNAME}:${GROUPNAME}
-#
-# ENTRYPOINT ["fixuid"]
+
+# -----------------------------------------------------------------------------
+# workdir
+# -----------------------------------------------------------------------------
+RUN set -x && \
+    mkdir -p ${WORKDIR}
+ENV WORKDIR=${WORKDIR}
+WORKDIR ${WORKDIR}
 
 
 # -----------------------------------------------------------------------------
 # entrypoint
 # -----------------------------------------------------------------------------
-RUN set -x \
-  && mkdir -p /etc/sudoers.d/ \
-  && echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/ALL \
-  && chmod u+s /usr/sbin/useradd \
-  && chmod u+s /usr/sbin/groupadd
 COPY docker-entrypoint.sh /usr/local/bin
 
-# ENV CODER_PATH=${CODER_PATH}
-WORKDIR ${WORKDIR}
+USER ${USER_NAME}:${GROUP_NAME}
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD [ "/usr/local/coder/code-server", "--auth", "none", "--port", "8443", "/work"]
+CMD [ "${CODER_PATH}/code-server", "--auth", "none", "--extensions-dir", "${WORKDIR}/extensions", "--port", "8443"]

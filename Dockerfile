@@ -1,7 +1,7 @@
-FROM ubuntu:18.04
+FROM hiracchi/ubuntu-ja:latest
 
-ARG CODER_TAG="2.1698"
-ARG CODER_VERSION="2.1698-vsc1.41.1"
+ARG CODER_TAG="3.2.0"
+ARG CODER_VERSION="3.2.0"
 ARG CODER_PATH=/usr/local/coder
 ARG WORKDIR="/work"
 
@@ -12,51 +12,38 @@ ENV LANG="ja_JP.UTF-8" LANGUAGE="ja_JP:en" LC_ALL="ja_JP.UTF-8" TZ="Asia/Tokyo"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CODER_PATH=${CODER_PATH}
 
+ENV PACKAGES="\
+    build-essential gfortran cmake git \
+    python3 python3-pip \
+    libblas-dev liblapack-dev liblapacke-dev \
+    libblacs-mpi-dev libscalapack-openmpi-dev \
+    libatlas-base-dev \
+    libopenblas-base libopenblas-dev \
+    libeigen3-dev \
+    ocl-icd-opencl-dev \
+    libclc-dev opencl-headers \
+    libboost-all-dev libviennacl-dev \
+    libhdf5-dev \
+    "
+
 # -----------------------------------------------------------------------------
-# base setup
+# packages
 # -----------------------------------------------------------------------------
 RUN set -x && \
     apt-get update && \
-    apt-get install -y \
-    apt-utils sudo wget gnupg locales tzdata wget curl && \
-    locale-gen ja_JP.UTF-8 && \
-    update-locale LANG=ja_JP.UTF-8 && \
-    apt-get install -y tzdata && \
-    echo "${TZ}" > /etc/timezone && \
-    mv /etc/localtime /etc/localtime.orig && \
-    ln -s /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata && \
+    apt-get install -y --no-install-recommends \
+    ${PACKAGES} && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# -----------------------------------------------------------------------------
-# fixuid
-# -----------------------------------------------------------------------------
-ARG GROUP_NAME=docker
-ARG USER_NAME=docker
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-ENV GROUP_NAME=${GROUP_NAME}
-ENV USER_NAME=${USER_NAME}
-
-RUN set -x && \
-    addgroup --gid ${GROUP_ID} ${GROUP_NAME} && \
-    adduser --uid ${USER_ID} --ingroup ${GROUP_NAME} --home /home/${USER_NAME} --shell /bin/sh --disabled-password --gecos "" ${USER_NAME}
-RUN set -x && \
-     curl -SsL "https://github.com/boxboat/fixuid/releases/download/v0.4/fixuid-0.4-linux-amd64.tar.gz" | tar -C /usr/local/bin -xzf - && \
-     chmod 4755 /usr/local/bin/fixuid && \
-     mkdir -p /etc/fixuid && \
-     printf "user: ${USER_NAME}\ngroup: ${GROUP_NAME}\n" > /etc/fixuid/config.yml
-
 
 # -----------------------------------------------------------------------------
 # install code-server
 # -----------------------------------------------------------------------------
 RUN set -x && \
     mkdir -p ${CODER_PATH} && \
-    wget "https://github.com/cdr/code-server/releases/download/${CODER_TAG}/code-server${CODER_VERSION}-linux-x86_64.tar.gz" && \
-    tar -xzf "code-server${CODER_VERSION}-linux-x86_64.tar.gz" -C ${CODER_PATH} --strip-components 1 && \
-    rm code-server${CODER_VERSION}-linux-x86_64.tar.gz
+    wget "https://github.com/cdr/code-server/releases/download/${CODER_TAG}/code-server-${CODER_VERSION}-linux-x86_64.tar.gz" && \
+    tar -xzf "code-server-${CODER_VERSION}-linux-x86_64.tar.gz" -C ${CODER_PATH} --strip-components 1 && \
+    rm code-server-${CODER_VERSION}-linux-x86_64.tar.gz
 
 # RUN set -x && \
 #     mkdir -p ${CODER_PATH}/extensions && \
@@ -97,8 +84,8 @@ WORKDIR ${WORKDIR}
 # -----------------------------------------------------------------------------
 # entrypoint
 # -----------------------------------------------------------------------------
-COPY docker-entrypoint.sh /usr/local/bin
+COPY scripts/* /usr/local/bin/
 
 USER ${USER_NAME}:${GROUP_NAME}
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD [ "${CODER_PATH}/code-server", "--auth", "none", "--extensions-dir", "${WORKDIR}/extensions", "--port", "8443"]
+CMD [ "${CODER_PATH}/code-server", "--auth", "none", "--extensions-dir", "${WORKDIR}/extensions", "--bind-addr", "0.0.0.0:8080"]

@@ -1,4 +1,4 @@
-CODER_VERSION=2.1698-vsc1.41.1
+CODER_VERSION=3.2.0
 PACKAGE=registry.gitlab.com/hiracchi/docker-coder
 TAG=${CODER_VERSION}
 CONTAINER_NAME=coder
@@ -24,10 +24,8 @@ start:
 		--name ${CONTAINER_NAME} \
 		--user ${USER_ID}:${GROUP_ID} \
 		--volume "${PWD}/work:/work" \
-		-p "8443:8443" \
+		-p "8080:8080" \
 		"${PACKAGE}:${TAG}" ${DEBUG_CMD}
-	@sleep 1
-	docker ps -a
 
 
 stop:
@@ -45,4 +43,4 @@ term:
 
 
 logs:
-	docker logs ${CONTAINER_NAME}
+	docker logs -f ${CONTAINER_NAME}

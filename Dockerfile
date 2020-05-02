@@ -1,4 +1,4 @@
-FROM hiracchi/ubuntu-ja:latest
+FROM hiracchi/pdf-builder:latest
 
 ARG CODER_TAG="3.2.0"
 ARG CODER_VERSION="3.2.0"
@@ -13,28 +13,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV CODER_PATH=${CODER_PATH}
 
 ENV PACKAGES="\
-    build-essential gfortran cmake git \
-    python3 python3-pip \
-    libblas-dev liblapack-dev liblapacke-dev \
-    libblacs-mpi-dev libscalapack-openmpi-dev \
-    libatlas-base-dev \
-    libopenblas-base libopenblas-dev \
-    libeigen3-dev \
-    ocl-icd-opencl-dev \
-    libclc-dev opencl-headers \
-    libboost-all-dev libviennacl-dev \
-    libhdf5-dev \
     "
 
 # -----------------------------------------------------------------------------
 # packages
 # -----------------------------------------------------------------------------
-RUN set -x && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ${PACKAGES} && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# RUN set -x && \
+#     apt-get update && \
+#     apt-get install -y --no-install-recommends \
+#     ${PACKAGES} && \
+#     apt-get clean && \
+#     rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
 # install code-server
